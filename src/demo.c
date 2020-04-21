@@ -142,7 +142,8 @@ void *fetch_in_thread(void *ptr)
     free_image(buff[buff_index]);
     buff[buff_index] = get_image_from_stream(cap);
     if(buff[buff_index].data == 0) {
-        demo_done = 1;
+        //demo_done = 1;
+        // don't quit the demo when the RTSP stream breaks (I hope)
         return 0;
     }
     letterbox_image_into(buff[buff_index], net->w, net->h, buff_letter[buff_index]);
@@ -183,6 +184,8 @@ void *detect_loop(void *ptr)
         detect_in_thread(0);
     }
 }
+
+extern int crow_alerted;
 
 void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
@@ -236,15 +239,22 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
         buff_index = (buff_index + 1) %3;
         if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
         if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-        if(!prefix){
-            fps = 1./(what_time_is_it_now() - demo_time);
-            demo_time = what_time_is_it_now();
-            display_in_thread(0);
-        }else{
+
+        fps = 1./(what_time_is_it_now() - demo_time);
+        demo_time = what_time_is_it_now();
+
+        if (prefix && crow_alerted) {
             char name[256];
+            char cmd[256];
             sprintf(name, "%s_%08d", prefix, count);
+            sprintf(cmd, "scp %s_%08d.jpg ***REMOVED***:public_html/secret/corvid/ &", prefix, count);
             save_image(buff[(buff_index + 1)%3], name);
+            system(cmd);
+            crow_alerted = 0;
         }
+
+        display_in_thread(0);
+
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
         ++count;

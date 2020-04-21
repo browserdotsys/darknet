@@ -236,9 +236,34 @@ image **load_alphabet()
     return alphabets;
 }
 
+time_t last_crow_sighting = 0;
+int num_crow_frames = 0;
+int crow_alerted = 0;
+// Alert only once every CROW_ALERT_INTERVAL seconds
+#define CROW_ALERT_INTERVAL 10
+// Require some number of consecutive detections
+#define CROW_CONFIDENCE 10
+void crow_alert(void) {
+    num_crow_frames++;
+    time_t now = time(NULL);
+    if (now - last_crow_sighting >= CROW_ALERT_INTERVAL &&
+        num_crow_frames >= CROW_CONFIDENCE) {
+        //system("afplay /Users/redacted/audio/falcon.wav &");
+        system("ntfy -t Dovecam send \"CROW ALERT\" &");
+        last_crow_sighting = now;
+        num_crow_frames = 0;
+	crow_alerted = 1;
+    }
+}
+
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
+    
+    // Reset crow counter if we haven't seen the crow
+    if (num == 0) {
+        num_crow_frames = 0;
+    }
 
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
@@ -253,6 +278,10 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                     strcat(labelstr, names[j]);
                 }
                 printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+                // CROW DETECTION
+                if (strcasestr(labelstr,"crow") != NULL) {
+                    crow_alert();
+                }
             }
         }
         if(class >= 0){

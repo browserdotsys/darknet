@@ -1,0 +1,5 @@
+classes = 1
+train  = data/corvid_train.txt
+valid  = data/corvid_train.txt
+names = data/corvid.names
+backup = backup/

@@ -110,12 +110,24 @@ image load_image_cv(char *filename, int channels)
     return im;
 }
 
+VideoWriter* video;
+
 int show_image_cv(image im, const char* name, int ms)
 {
     Mat m = image_to_mat(im);
     imshow(name, m);
     int c = waitKey(ms);
     if (c != -1) c = c%256;
+    if (0) {
+        if(video == NULL){
+            const char* output_name = "predictions.mjpeg";
+            video = new VideoWriter(output_name, CV_FOURCC('M','J','P','G'),30, Size(im.w,im.h));
+            //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'J', 'P', 'G'), 25, size, 1); - depending on your version of OpenCV
+            printf("\n DST output_video = %s  \n", output_name);
+        }
+        video->write(m);
+        printf("\n cvWriteFrame \n");
+    }
     return c;
 }
 
